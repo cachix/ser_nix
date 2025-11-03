@@ -1,6 +1,5 @@
 use crate::error::Error;
 use serde::{ser, Serialize, Serializer};
-use std::fmt::Display;
 
 /// Internal serializer that writes strings without quotes for Nix paths
 pub(crate) struct RawStringSerializer<'a> {
@@ -177,68 +176,66 @@ impl<'a> ser::Serializer for RawStringSerializer<'a> {
     }
 }
 
-/// Serialize a value as an unquoted Nix path.
+/// Serialize a `std::path::Path` as an unquoted Nix path.
 ///
 /// Use this function with `#[serde(serialize_with = "...")]` to serialize
-/// strings or paths without quotes, making them Nix path literals.
+/// Path or PathBuf types without quotes.
 ///
 /// # Example
 ///
 /// ```
 /// use serde::Serialize;
 /// use ser_nix::to_string;
+/// use std::path::PathBuf;
 ///
 /// #[derive(Serialize)]
 /// struct Config {
-///     #[serde(serialize_with = "ser_nix::as_path")]
-///     source: String,
-///     name: String,
+///     #[serde(serialize_with = "ser_nix::as_nix_path")]
+///     source: PathBuf,
 /// }
 ///
 /// let config = Config {
-///     source: "./hardware-configuration.nix".to_string(),
-///     name: "my-config".to_string(),
+///     source: PathBuf::from("./hardware-configuration.nix"),
 /// };
 ///
 /// let result = to_string(&config).unwrap();
-/// // Output: { source = ./hardware-configuration.nix; name = "my-config"; }
+/// // Output: { source = ./hardware-configuration.nix; }
 /// ```
-pub fn as_path<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+pub fn as_nix_path<S>(value: &std::path::Path, serializer: S) -> Result<S::Ok, S::Error>
 where
-    T: Display,
     S: Serializer,
 {
-    serializer.serialize_newtype_struct("__ser_nix_path", &format!("{}", value))
+    serializer.serialize_newtype_struct("__ser_nix_path", &value.display().to_string())
 }
 
-/// Serialize an Option value as an unquoted Nix path, or null if None.
+/// Serialize an `Option<PathBuf>` or `Option<&Path>` as an unquoted Nix path, or null if None.
 ///
 /// Use this function with `#[serde(serialize_with = "...")]` to serialize
-/// optional paths.
+/// optional Path/PathBuf types.
 ///
 /// # Example
 ///
 /// ```
 /// use serde::Serialize;
 /// use ser_nix::to_string;
+/// use std::path::PathBuf;
 ///
 /// #[derive(Serialize)]
 /// struct Config {
-///     #[serde(serialize_with = "ser_nix::as_optional_path")]
-///     source: Option<String>,
+///     #[serde(serialize_with = "ser_nix::as_optional_nix_path")]
+///     source: Option<PathBuf>,
 /// }
 ///
 /// let config = Config {
-///     source: Some("./path.nix".to_string()),
+///     source: Some(PathBuf::from("./path.nix")),
 /// };
 /// ```
-pub fn as_optional_path<T, S>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn as_optional_nix_path<S>(value: &Option<std::path::PathBuf>, serializer: S) -> Result<S::Ok, S::Error>
 where
-    T: Display,
     S: Serializer,
 {
     match value {
-        Some(v) => serializer.serialize_newtype_struct("__ser_nix_path", &format!("{}", v)),
+        Some(v) => serializer.serialize_newtype_struct("__ser_nix_path", &v.display().to_string()),
         None => serializer.serialize_none(),
     }
 }

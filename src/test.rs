@@ -278,23 +278,23 @@ mod test {
         assert_eq!(none_test, expected);
     }
 
+
     #[test]
-    fn path_serialization() {
-        use super::super::as_path;
+    fn path_with_pathbuf() {
+        use super::super::as_nix_path;
+        use std::path::PathBuf;
 
         #[derive(Serialize)]
         struct Config {
-            #[serde(serialize_with = "as_path")]
-            source: String,
-            #[serde(serialize_with = "as_path")]
-            relative: String,
-            name: String,
+            #[serde(serialize_with = "as_nix_path")]
+            source: PathBuf,
+            #[serde(serialize_with = "as_nix_path")]
+            config: PathBuf,
         }
 
         let config = Config {
-            source: "./hardware-configuration.nix".to_string(),
-            relative: "../other/module.nix".to_string(),
-            name: "my-config".to_string(),
+            source: PathBuf::from("./hardware-configuration.nix"),
+            config: PathBuf::from("/etc/nixos/configuration.nix"),
         };
 
         let config_str = to_string(&config).unwrap();
@@ -303,8 +303,7 @@ mod test {
         let expected = concat!(
             "{\n",
             "  source = ./hardware-configuration.nix;\n",
-            "  relative = ../other/module.nix;\n",
-            "  name = \"my-config\";\n",
+            "  config = /etc/nixos/configuration.nix;\n",
             "}",
         );
 
@@ -312,19 +311,20 @@ mod test {
     }
 
     #[test]
-    fn optional_path_serialization() {
-        use super::super::as_optional_path;
+    fn optional_pathbuf() {
+        use super::super::as_optional_nix_path;
+        use std::path::PathBuf;
 
         #[derive(Serialize)]
         struct Config {
-            #[serde(serialize_with = "as_optional_path")]
-            source: Option<String>,
-            #[serde(serialize_with = "as_optional_path")]
-            fallback: Option<String>,
+            #[serde(serialize_with = "as_optional_nix_path")]
+            source: Option<PathBuf>,
+            #[serde(serialize_with = "as_optional_nix_path")]
+            fallback: Option<PathBuf>,
         }
 
         let config = Config {
-            source: Some("./path.nix".to_string()),
+            source: Some(PathBuf::from("./default.nix")),
             fallback: None,
         };
 
@@ -333,7 +333,7 @@ mod test {
         #[rustfmt::skip]
         let expected = concat!(
             "{\n",
-            "  source = ./path.nix;\n",
+            "  source = ./default.nix;\n",
             "  fallback = null;\n",
             "}",
         );
@@ -342,26 +342,23 @@ mod test {
     }
 
     #[test]
-    fn path_list() {
-        use super::super::as_path;
-
-        #[derive(Serialize)]
-        struct Module {
-            #[serde(serialize_with = "as_path")]
-            path: String,
-        }
+    fn mixed_paths() {
+        use super::super::as_nix_path;
+        use std::path::PathBuf;
 
         #[derive(Serialize)]
         struct Config {
-            imports: Vec<Module>,
+            #[serde(serialize_with = "as_nix_path")]
+            nix_file: PathBuf,
+            #[serde(serialize_with = "as_nix_path")]
+            relative: PathBuf,
+            description: String,
         }
 
         let config = Config {
-            imports: vec![
-                Module { path: "./hardware.nix".to_string() },
-                Module { path: "./networking.nix".to_string() },
-                Module { path: "/etc/nixos/module.nix".to_string() },
-            ],
+            nix_file: PathBuf::from("/etc/nixos/hardware.nix"),
+            relative: PathBuf::from("./local.nix"),
+            description: "My config".to_string(),
         };
 
         let config_str = to_string(&config).unwrap();
@@ -369,17 +366,9 @@ mod test {
         #[rustfmt::skip]
         let expected = concat!(
             "{\n",
-            "  imports = [\n",
-            "    {\n",
-            "      path = ./hardware.nix;\n",
-            "    }\n",
-            "    {\n",
-            "      path = ./networking.nix;\n",
-            "    }\n",
-            "    {\n",
-            "      path = /etc/nixos/module.nix;\n",
-            "    }\n",
-            "  ];\n",
+            "  nix_file = /etc/nixos/hardware.nix;\n",
+            "  relative = ./local.nix;\n",
+            "  description = \"My config\";\n",
             "}",
         );
 

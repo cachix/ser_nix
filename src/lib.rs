@@ -70,26 +70,30 @@
 //!
 //! ## Nix paths
 //!
-//! Use the `as_path` helper to serialize strings as unquoted Nix paths:
+//! Use the `as_nix_path` helper to serialize `Path`/`PathBuf` types as unquoted Nix paths:
 //!
 //! ```rust
 //! use serde::Serialize;
 //! use ser_nix::to_string;
+//! use std::path::PathBuf;
 //!
 //! #[derive(Serialize)]
 //! struct NixConfig {
-//!     #[serde(serialize_with = "ser_nix::as_path")]
-//!     source: String,
+//!     #[serde(serialize_with = "ser_nix::as_nix_path")]
+//!     source: PathBuf,
+//!     #[serde(serialize_with = "ser_nix::as_nix_path")]
+//!     hardware: PathBuf,
 //!     description: String,
 //! }
 //!
 //! let config = NixConfig {
-//!     source: "./hardware-configuration.nix".to_string(),
+//!     source: PathBuf::from("./hardware-configuration.nix"),
+//!     hardware: PathBuf::from("/etc/nixos/hardware.nix"),
 //!     description: "Hardware config".to_string(),
 //! };
 //!
 //! let serialized = to_string(&config).unwrap();
-//! // source is unquoted: ./hardware-configuration.nix
+//! // source and hardware are unquoted paths
 //! // description is quoted: "Hardware config"
 //! ```
 //!
@@ -109,7 +113,7 @@ mod test;
 mod tuple;
 
 pub use error::Error;
-pub use path::{as_path, as_optional_path};
+pub use path::{as_nix_path, as_optional_nix_path};
 use ser::Serializer;
 
 use serde::Serialize;
