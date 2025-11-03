@@ -184,12 +184,17 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 
     fn serialize_newtype_struct<T>(
         self,
-        _name: &'static str,
+        name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
+        if name == "__ser_nix_path" {
+            use crate::path::RawStringSerializer;
+            let raw_serializer = RawStringSerializer { output: &mut self.output };
+            return value.serialize(raw_serializer);
+        }
         value.serialize(self)
     }
 

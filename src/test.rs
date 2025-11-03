@@ -279,6 +279,114 @@ mod test {
     }
 
     #[test]
+    fn path_serialization() {
+        use super::super::as_path;
+
+        #[derive(Serialize)]
+        struct Config {
+            #[serde(serialize_with = "as_path")]
+            source: String,
+            #[serde(serialize_with = "as_path")]
+            relative: String,
+            name: String,
+        }
+
+        let config = Config {
+            source: "./hardware-configuration.nix".to_string(),
+            relative: "../other/module.nix".to_string(),
+            name: "my-config".to_string(),
+        };
+
+        let config_str = to_string(&config).unwrap();
+
+        #[rustfmt::skip]
+        let expected = concat!(
+            "{\n",
+            "  source = ./hardware-configuration.nix;\n",
+            "  relative = ../other/module.nix;\n",
+            "  name = \"my-config\";\n",
+            "}",
+        );
+
+        assert_eq!(config_str, expected);
+    }
+
+    #[test]
+    fn optional_path_serialization() {
+        use super::super::as_optional_path;
+
+        #[derive(Serialize)]
+        struct Config {
+            #[serde(serialize_with = "as_optional_path")]
+            source: Option<String>,
+            #[serde(serialize_with = "as_optional_path")]
+            fallback: Option<String>,
+        }
+
+        let config = Config {
+            source: Some("./path.nix".to_string()),
+            fallback: None,
+        };
+
+        let config_str = to_string(&config).unwrap();
+
+        #[rustfmt::skip]
+        let expected = concat!(
+            "{\n",
+            "  source = ./path.nix;\n",
+            "  fallback = null;\n",
+            "}",
+        );
+
+        assert_eq!(config_str, expected);
+    }
+
+    #[test]
+    fn path_list() {
+        use super::super::as_path;
+
+        #[derive(Serialize)]
+        struct Module {
+            #[serde(serialize_with = "as_path")]
+            path: String,
+        }
+
+        #[derive(Serialize)]
+        struct Config {
+            imports: Vec<Module>,
+        }
+
+        let config = Config {
+            imports: vec![
+                Module { path: "./hardware.nix".to_string() },
+                Module { path: "./networking.nix".to_string() },
+                Module { path: "/etc/nixos/module.nix".to_string() },
+            ],
+        };
+
+        let config_str = to_string(&config).unwrap();
+
+        #[rustfmt::skip]
+        let expected = concat!(
+            "{\n",
+            "  imports = [\n",
+            "    {\n",
+            "      path = ./hardware.nix;\n",
+            "    }\n",
+            "    {\n",
+            "      path = ./networking.nix;\n",
+            "    }\n",
+            "    {\n",
+            "      path = /etc/nixos/module.nix;\n",
+            "    }\n",
+            "  ];\n",
+            "}",
+        );
+
+        assert_eq!(config_str, expected);
+    }
+
+    #[test]
     fn newtype_var() {
         #[derive(Serialize)]
         enum Test {

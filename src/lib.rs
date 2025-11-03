@@ -42,6 +42,57 @@
 //! assert_eq!(serialized, expected);
 //! ````
 //!
+//! ## Option and None values
+//!
+//! Following serde_json conventions, `Option::None` values are serialized
+//! as `null` by default. To omit fields when they are `None`, use the
+//! `#[serde(skip_serializing_if = "Option::is_none")]` attribute:
+//!
+//! ```rust
+//! use serde::Serialize;
+//! use ser_nix::to_string;
+//!
+//! #[derive(Serialize)]
+//! struct Config {
+//!     enabled: Option<bool>,
+//!     #[serde(skip_serializing_if = "Option::is_none")]
+//!     optional: Option<String>,
+//! }
+//!
+//! let config = Config {
+//!     enabled: None,
+//!     optional: None,
+//! };
+//!
+//! let serialized = to_string(&config).unwrap();
+//! // Output: { enabled = null; }
+//! ```
+//!
+//! ## Nix paths
+//!
+//! Use the `as_path` helper to serialize strings as unquoted Nix paths:
+//!
+//! ```rust
+//! use serde::Serialize;
+//! use ser_nix::to_string;
+//!
+//! #[derive(Serialize)]
+//! struct NixConfig {
+//!     #[serde(serialize_with = "ser_nix::as_path")]
+//!     source: String,
+//!     description: String,
+//! }
+//!
+//! let config = NixConfig {
+//!     source: "./hardware-configuration.nix".to_string(),
+//!     description: "Hardware config".to_string(),
+//! };
+//!
+//! let serialized = to_string(&config).unwrap();
+//! // source is unquoted: ./hardware-configuration.nix
+//! // description is quoted: "Hardware config"
+//! ```
+//!
 //! ## Disclaimer
 //!
 //! This library was created mostly to be used as a subcomponent of my main
@@ -50,6 +101,7 @@
 //! to change that over time
 mod error;
 mod map;
+mod path;
 mod seq;
 mod ser;
 mod r#struct;
@@ -57,6 +109,7 @@ mod test;
 mod tuple;
 
 pub use error::Error;
+pub use path::{as_path, as_optional_path};
 use ser::Serializer;
 
 use serde::Serialize;
