@@ -280,7 +280,7 @@ mod test {
 
 
     #[test]
-    fn path_with_pathbuf() {
+    fn path_with_serialize_with() {
         use super::super::as_nix_path;
         use std::path::PathBuf;
 
@@ -308,6 +308,47 @@ mod test {
         );
 
         assert_eq!(config_str, expected);
+    }
+
+    #[test]
+    fn path_with_nix_path_wrapper() {
+        use super::super::NixPath;
+        use std::path::PathBuf;
+
+        #[derive(Serialize)]
+        struct Config {
+            source: NixPath<'static>,
+            config: NixPath<'static>,
+        }
+
+        let config = Config {
+            source: NixPath::from(PathBuf::from("./hardware-configuration.nix")),
+            config: NixPath::from(PathBuf::from("/etc/nixos/configuration.nix")),
+        };
+
+        let config_str = to_string(&config).unwrap();
+
+        #[rustfmt::skip]
+        let expected = concat!(
+            "{\n",
+            "  source = ./hardware-configuration.nix;\n",
+            "  config = /etc/nixos/configuration.nix;\n",
+            "}",
+        );
+
+        assert_eq!(config_str, expected);
+    }
+
+    #[test]
+    fn nix_path_from_borrowed_path() {
+        use super::super::NixPath;
+        use std::path::Path;
+
+        let path = Path::new("./test.nix");
+        let nix_path = NixPath::from(path);
+
+        let result = to_string(&nix_path).unwrap();
+        assert_eq!(result, "./test.nix");
     }
 
     #[test]
@@ -343,21 +384,20 @@ mod test {
 
     #[test]
     fn mixed_paths() {
-        use super::super::as_nix_path;
+        use super::super::{as_nix_path, NixPath};
         use std::path::PathBuf;
 
         #[derive(Serialize)]
         struct Config {
+            nix_path: NixPath<'static>,
             #[serde(serialize_with = "as_nix_path")]
-            nix_file: PathBuf,
-            #[serde(serialize_with = "as_nix_path")]
-            relative: PathBuf,
+            serialize_with_path: PathBuf,
             description: String,
         }
 
         let config = Config {
-            nix_file: PathBuf::from("/etc/nixos/hardware.nix"),
-            relative: PathBuf::from("./local.nix"),
+            nix_path: NixPath::from(PathBuf::from("/etc/nixos/hardware.nix")),
+            serialize_with_path: PathBuf::from("./local.nix"),
             description: "My config".to_string(),
         };
 
@@ -366,8 +406,8 @@ mod test {
         #[rustfmt::skip]
         let expected = concat!(
             "{\n",
-            "  nix_file = /etc/nixos/hardware.nix;\n",
-            "  relative = ./local.nix;\n",
+            "  nix_path = /etc/nixos/hardware.nix;\n",
+            "  serialize_with_path = ./local.nix;\n",
             "  description = \"My config\";\n",
             "}",
         );

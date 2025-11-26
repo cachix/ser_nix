@@ -1,6 +1,6 @@
 use super::error::Error;
 
-use serde::{Serialize, ser};
+use serde::{ser, Serialize};
 
 pub struct Serializer {
     pub output: String,
@@ -190,10 +190,10 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        if name == "__ser_nix_path" {
-            use crate::path::RawStringSerializer;
-            let raw_serializer = RawStringSerializer { output: &mut self.output };
-            return value.serialize(raw_serializer);
+        if name == crate::path::TOKEN {
+            use crate::path::PathStrEmitter;
+            let emitter = PathStrEmitter { output: &mut self.output };
+            return value.serialize(emitter);
         }
         value.serialize(self)
     }
