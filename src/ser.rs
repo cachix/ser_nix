@@ -190,7 +190,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        if name == crate::path::TOKEN {
+        if name == crate::path::TOKEN || name == crate::literal::TOKEN {
             use crate::path::PathStrEmitter;
             let emitter = PathStrEmitter { output: &mut self.output };
             return value.serialize(emitter);
